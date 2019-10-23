@@ -4,8 +4,17 @@ import re
 import sched
 import time
 from urllib.request import urlopen, Request, urlretrieve
+import argparse
 
-from bs4 import BeautifulSoup	# pip install beautifulsoup4
+from bs4 import BeautifulSoup
+
+
+def parse_args():
+	parser = argparse.ArgumentParser(description='Get URL, date, and keywords to check for.')
+	parser.add_argument('--url', metavar='https://in.bookmyshow.com/buytickets/<movie>-<location>/<some-string>/', type=str, 
+					help='URL to the movie\'s page in in.bookmyshow.com')
+	parser.add_argument('--date', dest='accumulate', type=str,
+                    help='Date to check for.')
 
 
 def get_venue_list(schdlr):
