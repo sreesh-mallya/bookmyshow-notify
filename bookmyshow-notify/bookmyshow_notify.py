@@ -11,15 +11,14 @@ from bs4 import BeautifulSoup
 from utils import build_keywords_regex, build_url, validate_date
 
 
-def parse_args():
+def parse_args(cl_args):
 	parser = argparse.ArgumentParser(description='BookMyShow shows and showtimes notifier CLI.')
 
-	parser.add_argument('--url', metavar='https://in.bookmyshow.com/buytickets/<movie>-<location>/<some-string>/', type=str, 
-					help='URL to the movie\'s page in in.bookmyshow.com')
-	parser.add_argument('--date', type=str, help='Date to check for.', metavar='DD-MM-YYYY')
-	parser.add_argument('--keywords', type=str, help='Names of multiplexes or theatres to check for.')
+	parser.add_argument('url', type=str, help='URL to the movie\'s page in in.bookmyshow.com')
+	parser.add_argument('date', type=str, help='Date to check for in format DD-MM-YYYY.')
+	parser.add_argument('keywords', type=str, help='Names of multiplexes or theatres to check for.')
 
-	args = parser.parse_args()
+	args = parser.parse_args(cl_args)
 	return args
 
 
@@ -28,7 +27,6 @@ def get_venue_list(url):
 	headers = {'User-Agent': user_agent}
 
 	req = Request(url, None, headers)
-
 	with urlopen(req) as response:
 	    html = response.read()
 
@@ -39,11 +37,9 @@ def get_venue_list(url):
 
 def check_for_keywords(venue_list, keywords):
 	regex = re.compile(keywords, re.IGNORECASE)
-
 	for venue in venue_list:
 		if regex.search(venue['data-name']):
 			return True
-		
 	return False
 
 
@@ -56,9 +52,9 @@ def keep_checking(schdlr, url):
 
 
 if __name__ == '__main__':
-	args = parse_args()
+	import sys
+	args = parse_args(sys.argv[1:])
 	bookmyshow_url = build_url(args.url, args.date)
-	keep_checking(schdlr)
 	schdlr = sched.scheduler(time.time, time.sleep)
-	schdlr.enter(60, 1, keep_checking, (schdlr, )) 
+	schdlr.enter(60, 1, keep_checking, (schdlr, bookmyshow_url)) 
 	schdlr.run()
