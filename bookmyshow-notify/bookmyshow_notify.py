@@ -8,25 +8,26 @@ import argparse
 
 from bs4 import BeautifulSoup
 
+from utils import build_keywords_regex, build_url, validate_date
+
 
 def parse_args():
 	parser = argparse.ArgumentParser(description='BookMyShow shows and showtimes notifier CLI.')
+
 	parser.add_argument('--url', metavar='https://in.bookmyshow.com/buytickets/<movie>-<location>/<some-string>/', type=str, 
 					help='URL to the movie\'s page in in.bookmyshow.com')
 	parser.add_argument('--date', type=str, help='Date to check for.', metavar='DD-MM-YYYY')
 	parser.add_argument('--keywords', type=str, help='Names of multiplexes or theatres to check for.')
 
+	args = parser.parse_args()
+	return args
 
-def get_venue_list(date, url):
 
-	# TODO: This function should just return the list of venues after parsing the HTML
-
+def get_venue_list(url):
 	user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0'
 	headers = {'User-Agent': user_agent}
 
-	bookmyshow_url = url + date
-
-	req = Request(bookmyshow_url, None, headers)
+	req = Request(url, None, headers)
 
 	with urlopen(req) as response:
 	    html = response.read()
@@ -37,29 +38,27 @@ def get_venue_list(date, url):
 
 
 def check_for_keywords(venue_list, keywords):
-
-	# TODO: This function should check for keywords
-
 	regex = re.compile(keywords, re.IGNORECASE)
 
 	for venue in venue_list:
 		if regex.search(venue['data-name']):
-			return true
-			
+			return True
+		
+	return False
 
-def main(args):
 
-	# TODO: This function is the entrypoint. This function should also call parse_args(), validate the arguments, call get_venue_list() and check_for_keywords()
-
-	arguments = parse_args()
-	venue_list = get_venue_list(arguments.date, arguments.url)
-	
+def keep_checking(schdlr, url):
+	venue_list = get_venue_list(url)
 	if check_for_keywords(venue_list):
 		webbrowser.open()
-	schdlr.enter(60, 1, main, (schdlr, ))
+	else:
+		schdlr.enter(60, 1, keep_checking, (schdlr, ))
 
 
 if __name__ == '__main__':
+	args = parse_args()
+	bookmyshow_url = build_url(args.url, args.date)
+	keep_checking(schdlr)
 	schdlr = sched.scheduler(time.time, time.sleep)
-	schdlr.enter(60, 1, main, (schdlr, )) 
+	schdlr.enter(60, 1, keep_checking, (schdlr, )) 
 	schdlr.run()
