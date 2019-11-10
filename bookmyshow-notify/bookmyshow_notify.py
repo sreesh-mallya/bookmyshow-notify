@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from utils import build_url, validate_date
 
 logger_handle = 'bookmyshow_notify'
-logging.basicConfig(level=logging.NOTSET, format='[%(asctime)s] [%(levelname)s] \t %(message)s', datefmt='%d-%m-%Y %H:%M:%S')
+logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s] \t %(message)s', datefmt='%d-%m-%Y %H:%M:%S')
 logger = logging.getLogger(logger_handle)
 
 
