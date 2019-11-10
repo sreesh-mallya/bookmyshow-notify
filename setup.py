@@ -5,7 +5,6 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="bookmyshow-notify",
-    packages=["bookmyshow-notify"],
     version="0.1.0",
     author="Sreesh Mallya",
     author_email="sreeshsmallya@gmail.com",
@@ -17,8 +16,14 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: GNU GPL",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "License :: OSI Approved :: GNU General Public License (GPL)",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.5',
+    install_requires=[
+        "beautifulsoup4"
+    ]
 )
