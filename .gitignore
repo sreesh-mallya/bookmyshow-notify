@@ -104,3 +104,9 @@ venv.bak/
 .mypy_cache/
 
 .vscode/
+.idea/.gitignore
+.idea/bookmyshow-notify.iml
+.idea/inspectionProfiles/
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
