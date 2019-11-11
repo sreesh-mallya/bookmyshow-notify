@@ -3,13 +3,11 @@ import webbrowser
 import re
 import sched
 import time
-from urllib.request import urlopen, Request, urlretrieve
+from urllib.request import urlopen, Request
 import argparse
 import logging
 
 from bs4 import BeautifulSoup
-
-from .utils import build_url, validate_date
 
 logger_handle = 'bookmyshow_notify'
 logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s] \t %(message)s',
@@ -24,6 +22,22 @@ def parse_args(cl_args):
     parser.add_argument('keywords', type=str, help='Names of multiplexes or theatres to check for.')
     args = parser.parse_args(cl_args)
     return args
+
+
+def validate_date(date):
+    try:
+        datetime.datetime.strptime(date, '%d-%m-%Y')
+    except ValueError:
+        logger.exception('Incorrect date format! Expected format is DD-MM-YYYY.')
+    return date
+
+
+def build_url(url, date):
+    validated_date = validate_date(date)
+
+    # Split the validated date with `-`, reverse the obtained list, and then join it to get the inverted date
+    bookmyshow_url = url + ''.join(validated_date.split('-')[::-1])
+    return bookmyshow_url
 
 
 def get_venue_list(url):
@@ -49,7 +63,7 @@ def check_for_keywords(venue_list, keywords):
 
 
 def keep_checking(schdlr, url, keywords):
-    logger.info('Checking for shows.')
+    logger.info('Checking for shows...')
     venue_list = get_venue_list(url)
     if check_for_keywords(venue_list, keywords):
         logger.info('Successfully found match.')
@@ -63,7 +77,7 @@ def keep_checking(schdlr, url, keywords):
 def main():
     import sys
     args = parse_args(sys.argv[1:])
-    logger.debug('Recieved arguments \nURL: {}\nDate: {}\nKeywords: {}\n'.format(args.url, args.date, args.keywords))
+    logger.debug('Received arguments \nURL: {}\nDate: {}\nKeywords: {}\n'.format(args.url, args.date, args.keywords))
     bookmyshow_url = build_url(args.url, args.date)
     logger.debug('BookMyShow booking page URL: ' + bookmyshow_url)
     schdlr = sched.scheduler(time.time, time.sleep)
