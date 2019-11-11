@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="bookmyshow-notify",
+    name="bookmyshow_notify",
     version="0.1.0",
     author="Sreesh Mallya",
     author_email="sreeshsmallya@gmail.com",
@@ -25,5 +25,6 @@ setuptools.setup(
     python_requires='>=3.5',
     install_requires=[
         "beautifulsoup4"
-    ]
+    ],
+    entry_points={"console_scripts": ['bookmyshow-notify=bookmyshow_notify.bookmyshow_notify:main']}
 )
