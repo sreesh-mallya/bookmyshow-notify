@@ -1,6 +1,7 @@
 import datetime
 import webbrowser
 import re
+import sys
 import sched
 import time
 from urllib.request import urlopen, Request
@@ -9,17 +10,21 @@ import logging
 
 from bs4 import BeautifulSoup
 
-logger_handle = 'bookmyshow_notify'
-logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s] \t %(message)s',
+logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s] %(message)s',
                     datefmt='%d-%m-%Y %H:%M:%S')
-logger = logging.getLogger(logger_handle)
+LOGGER = logging.getLogger('bookmyshow_notify')
 
 
 def parse_args(cl_args):
     parser = argparse.ArgumentParser(description='BookMyShow shows and showtimes notifier CLI.')
-    parser.add_argument('url', type=str, help='URL to the movie\'s page in in.bookmyshow.com')
+    parser.add_argument('url', type=str, help='URL to the movie\'s page on in.bookmyshow.com')
     parser.add_argument('date', type=str, help='Date to check for, in format DD-MM-YYYY.')
-    parser.add_argument('keywords', type=str, help='Names of multiplexes or theatres to check for.')
+    parser.add_argument('--keywords', type=str, nargs='*',
+                        help='Names of multiplexes or theatres to check for. '
+                        'If no arguments are passed, it checks for any venue '
+                        'for the given date.')
+    parser.add_argument('--seconds', metavar='S', type=float,
+                        help='Time in seconds to keep checking after (default: 60s).')
     args = parser.parse_args(cl_args)
     return args
 
@@ -28,14 +33,16 @@ def validate_date(date):
     try:
         datetime.datetime.strptime(date, '%d-%m-%Y')
     except ValueError:
-        logger.exception('Incorrect date format! Expected format is DD-MM-YYYY.')
+        LOGGER.exception('Incorrect date format! Expected format is DD-MM-YYYY.')
+        sys.exit()
     return date
 
 
 def build_url(url, date):
     validated_date = validate_date(date)
 
-    # Split the validated date with `-`, reverse the obtained list, and then join it to get the inverted date
+    # Split the validated date with `-`, reverse the obtained list, 
+    # and then join it to get the inverted date
     bookmyshow_url = url + ''.join(validated_date.split('-')[::-1])
     return bookmyshow_url
 
@@ -50,42 +57,49 @@ def get_venue_list(url):
 
     soup = BeautifulSoup(html, 'html.parser')
     venue_list = soup.find_all('ul', {'id': 'venuelist'})[0].find_all('li', {'data-name': True})
+    venue_list = [venue['data-name'] for venue in venue_list]
     return venue_list
 
 
 def check_for_keywords(venue_list, keywords):
+    if not keywords:
+        LOGGER.info('No keywords for venues specified. Available venues: %s', venue_list)
+        return True
+
     kws = r'|'.join(keywords)
     regex = re.compile(kws, re.IGNORECASE)
     for venue in venue_list:
-        if regex.search(venue['data-name']):
+        if regex.search(venue):
+            LOGGER.info('Successfully found match. Venue: %s', venue_list)
             return True
     return False
 
 
-def keep_checking(schdlr, url, keywords):
-    logger.info('Checking for shows...')
+def keep_checking(schdlr, url, keywords, seconds):
+    LOGGER.info('Checking for venues with matching keywords...')
     venue_list = get_venue_list(url)
     if check_for_keywords(venue_list, keywords):
-        logger.info('Successfully found match.')
         webbrowser.open(url)
-        exit()
+        sys.exit()
     else:
-        logger.info('Couldn\'t find any match. Trying again.')
-        schdlr.enter(60, 1, keep_checking, (schdlr, url, keywords))
+        LOGGER.info('Couldn\'t find any match. Trying again.')
+        schdlr.enter(60, 1, keep_checking, (schdlr, url, keywords, seconds))
 
 
 def main():
-    import sys
     args = parse_args(sys.argv[1:])
-    logger.debug('Received arguments \nURL: {}\nDate: {}\nKeywords: {}\n'.format(args.url, args.date, args.keywords))
+    LOGGER.debug('Received arguments \nURL: '
+                 '%s\nDate: %s\nKeywords: %s\nKeep checking after: %d seconds',
+                 args.url, args.date, args.keywords, args.seconds)
     bookmyshow_url = build_url(args.url, args.date)
-    logger.debug('BookMyShow booking page URL: ' + bookmyshow_url)
+    LOGGER.debug('BookMyShow booking page URL: %s', bookmyshow_url)
     schdlr = sched.scheduler(time.time, time.sleep)
-    schdlr.enter(60, 1, keep_checking, (schdlr, bookmyshow_url, args.keywords))
+    schdlr.enter(args.seconds, 1, keep_checking, (schdlr, bookmyshow_url,
+                                                  args.keywords, args.seconds))
     try:
         schdlr.run()
     except KeyboardInterrupt:
-        logger.info("Exiting.")
+        LOGGER.info("Exiting.")
 
 
 if __name__ == '__main__':
