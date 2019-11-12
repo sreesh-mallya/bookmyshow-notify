@@ -12,7 +12,11 @@ from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s] %(message)s',
                     datefmt='%d-%m-%Y %H:%M:%S')
+
 LOGGER = logging.getLogger('bookmyshow_notify')
+BASE_URL = r'https://in.bookmyshow.com/'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0'
+HEADERS = {'User-Agent': USER_AGENT}
 
 
 def parse_args(cl_args):
@@ -22,9 +26,13 @@ def parse_args(cl_args):
     parser.add_argument('--keywords', type=str, nargs='*',
                         help='Names of multiplexes or theatres to check for. '
                         'If no arguments are passed, it checks for any venue '
-                        'for the given date.')
+                        'on the given date.')
     parser.add_argument('--seconds', metavar='S', type=float,
                         help='Time in seconds to keep checking after (default: 60s).')
+    parser.add_argument('--movie', metavar='MOVIE', type=str, 
+                        help='Name of the show you\'re searching for.')
+    parser.add_argument('--location', metavar='LOCATION', type=str, 
+                        help='Your location. Eg: bengaluru, kochi, trivandrum.')
     args = parser.parse_args(cl_args)
     return args
 
@@ -47,11 +55,31 @@ def build_url(url, date):
     return bookmyshow_url
 
 
-def get_venue_list(url):
-    user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0'
-    headers = {'User-Agent': user_agent}
+def get_movie_id(name, location):
+    url = BASE_URL + location.lower()
+    req = Request(url, None, HEADERS)
+    with urlopen(req) as response:
+        html = response.read()
 
-    req = Request(url, None, headers)
+    soup = BeautifulSoup(html, 'html.parser')
+    movie_url_regex = re.compile("{}/movies/".format(location.lower()), re.IGNORECASE)
+    movie_anchors = soup.find_all('a', href=movie_url_regex)
+    for a in movie_anchors:
+        path = a.get('href')
+        if name.lower() in path:
+            index = path.rfind('/')
+
+            # TODO: Handle a case where name match not found
+
+            return path[index+1:]
+
+
+def generate_buytickets_page_url():
+    pass
+
+
+def get_venue_list(url):
+    req = Request(url, None, HEADERS)
     with urlopen(req) as response:
         html = response.read()
 
