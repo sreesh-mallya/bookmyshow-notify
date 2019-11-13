@@ -67,14 +67,12 @@ def get_movie_id(name, location):
     for a in movie_anchors:
         path = a.get('href')
         if name.lower() in path:
-            index = path.rfind('/')
-
+            path_list = path.split('/')
             # TODO: Handle a case where name match not found
+            return dict(movie_id=path_list[3], movie_name=path_list[2])
 
-            return path[index+1:]
 
-
-def generate_buytickets_page_url():
+def generate_buytickets_page_url(movie_id, name, location):
     pass
 
 
