@@ -67,13 +67,27 @@ def get_movie_id(name, location):
     for a in movie_anchors:
         path = a.get('href')
         if name.lower() in path:
-            path_list = path.split('/')
-            # TODO: Handle a case where name match not found
-            return dict(movie_id=path_list[3], movie_name=path_list[2])
+
+            # TODO: Handle a case where no match found
+
+            return path
 
 
-def generate_buytickets_page_url(movie_id, name, location):
-    pass
+def get_movie_page_url(path, location):
+    movie_page_url = '{}/{}/{}'.format(BASE_URL, location, path)
+
+    # TODO: Add some sort of validation for fields if needed
+
+    return movie_page_url
+
+
+def get_buytickets_page_url(movie_page_url):
+    req = Request(movie_page_url, None, HEADERS)
+    with urlopen(req) as response:
+        html = response.read()
+
+    soup = BeautifulSoup(html, 'html.parser')
+
 
 
 def get_venue_list(url):
