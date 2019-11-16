@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s] %
                     datefmt='%d-%m-%Y %H:%M:%S')
 
 LOGGER = logging.getLogger('bookmyshow_notify')
-BASE_URL = r'https://in.bookmyshow.com/'
+BASE_URL = r'https://in.bookmyshow.com'
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0'
 HEADERS = {'User-Agent': USER_AGENT}
 
@@ -32,6 +32,8 @@ def parse_args(cl_args):
     parser.add_argument('--movie', metavar='MOVIE', type=str, 
                         help='Name of the show you\'re searching for.')
     parser.add_argument('--location', metavar='LOCATION', type=str, 
+                        help='Your location. Eg: bengaluru, kochi, trivandrum.')
+    parser.add_argument('--formats', metavar='FORMAT', type=str, nargs='*', 
                         help='Your location. Eg: bengaluru, kochi, trivandrum.')
     args = parser.parse_args(cl_args)
     return args
@@ -82,14 +84,18 @@ def get_movie_page_url(path, location):
     return movie_page_url
 
 
-def get_buytickets_page_url(movie_page_url):
+def get_buytickets_page_url(movie_page_url, format):
     req = Request(movie_page_url, None, HEADERS)
     with urlopen(req) as response:
         html = response.read()
 
     soup = BeautifulSoup(html, 'html.parser')
-    # Movie URL changes with format. Example: 2D, IMAX 2D etc.
-
+    anchor_elements = soup.find_all('a', {'class': 'dimension-pill'})
+    for element in anchor_elements:
+        contents = [content.lower() for content in element.contents]
+        if format.lower() in contents:
+            # TODO: Handle a case when content not found
+            return BASE_URL + element.get('href')
 
 
 def get_venue_list(url):
