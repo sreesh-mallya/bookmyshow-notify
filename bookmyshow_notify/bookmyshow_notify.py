@@ -75,6 +75,7 @@ def get_movie_id(name, location):
 
 def get_movie_page_url(path, location):
     movie_page_url = '{}/{}/{}'.format(BASE_URL, location, path)
+    LOGGER.info('Movie page URL: %s', movie_page_url)
 
     # TODO: Add some sort of validation for fields if needed
 
@@ -87,6 +88,7 @@ def get_buytickets_page_url(movie_page_url):
         html = response.read()
 
     soup = BeautifulSoup(html, 'html.parser')
+    # Movie URL changes with format. Example: 2D, IMAX 2D etc.
 
 
 
