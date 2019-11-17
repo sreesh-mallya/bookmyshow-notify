@@ -21,7 +21,7 @@ HEADERS = {'User-Agent': USER_AGENT}
 
 def parse_args(cl_args):
     parser = argparse.ArgumentParser(description='BookMyShow shows and showtimes notifier CLI.')
-    parser.add_argument('url', type=str, help='URL to the movie\'s page on in.bookmyshow.com')
+    parser.add_argument('--url', type=str, help='URL to the movie\'s page on in.bookmyshow.com')
     parser.add_argument('date', type=str, help='Date to check for, in format DD-MM-YYYY.')
     parser.add_argument('--keywords', type=str, nargs='*',
                         help='Names of multiplexes or theatres to check for. '
@@ -33,7 +33,9 @@ def parse_args(cl_args):
                         help='Name of the show you\'re searching for.')
     parser.add_argument('--location', metavar='LOCATION', type=str, 
                         help='Your location. Eg: bengaluru, kochi, trivandrum.')
-    parser.add_argument('--formats', metavar='FORMAT', type=str, nargs='*', 
+
+    # TODO: Multiple format support
+    parser.add_argument('--format', metavar='FORMAT', type=str,
                         help='Your location. Eg: bengaluru, kochi, trivandrum.')
     args = parser.parse_args(cl_args)
     return args
@@ -49,6 +51,7 @@ def validate_date(date):
 
 
 def build_url(url, date):
+    # TODO: In case date is not passed, either take the date of the same day or the next day
     validated_date = validate_date(date)
 
     # Split the validated date with `-`, reverse the obtained list, 
@@ -136,6 +139,11 @@ def keep_checking(schdlr, url, keywords, seconds):
 
 def main():
     args = parse_args(sys.argv[1:])
+
+    if not args.url and not args.location and not args.movie and not args.format:
+        LOGGER.error('You need to specify the `--location`, `--format`, and `--movie` arguments if you\'re not specifying the URL directly. Exiting.')
+        sys.exit()
+
     LOGGER.debug('Received arguments \nURL: '
                  '%s\nDate: %s\nKeywords: %s\nKeep checking after: %d seconds',
                  args.url, args.date, args.keywords, args.seconds)
