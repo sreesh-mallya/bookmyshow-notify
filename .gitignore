@@ -111,3 +111,6 @@ venv.bak/
 .idea/modules.xml
 .idea/vcs.xml
 .idea/dictionaries/
+
+# Ignore file used to test BS4 scripts
+bookmyshow_notify/test_bs4.py

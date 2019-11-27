@@ -12,19 +12,31 @@ from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s] %(message)s',
                     datefmt='%d-%m-%Y %H:%M:%S')
+
 LOGGER = logging.getLogger('bookmyshow_notify')
+BASE_URL = r'https://in.bookmyshow.com'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0'
+HEADERS = {'User-Agent': USER_AGENT}
 
 
 def parse_args(cl_args):
     parser = argparse.ArgumentParser(description='BookMyShow shows and showtimes notifier CLI.')
-    parser.add_argument('url', type=str, help='URL to the movie\'s page on in.bookmyshow.com')
-    parser.add_argument('date', type=str, help='Date to check for, in format DD-MM-YYYY.')
+    parser.add_argument('--url', type=str, help='URL to the movie\'s page on in.bookmyshow.com')
+    parser.add_argument('--date', type=str, help='Date to check for, in format DD-MM-YYYY.')
     parser.add_argument('--keywords', type=str, nargs='*',
                         help='Names of multiplexes or theatres to check for. '
                         'If no arguments are passed, it checks for any venue '
-                        'for the given date.')
+                        'on the given date.')
     parser.add_argument('--seconds', metavar='S', type=float,
                         help='Time in seconds to keep checking after (default: 60s).')
+    parser.add_argument('--movie', metavar='MOVIE', type=str, 
+                        help='Name of the show you\'re searching for.')
+    parser.add_argument('--location', metavar='LOCATION', type=str, 
+                        help='Your location. Eg: bengaluru, kochi, trivandrum.')
+
+    # TODO: Multiple format support
+    parser.add_argument('--format', metavar='FORMAT', type=str,
+                        help='Movie format. Eg: 2D, 3D, IMAX3D etc.')
     args = parser.parse_args(cl_args)
     return args
 
@@ -39,6 +51,7 @@ def validate_date(date):
 
 
 def build_url(url, date):
+    # TODO: In case date is not passed, either take the date of the same day or the next day
     validated_date = validate_date(date)
 
     # Split the validated date with `-`, reverse the obtained list, 
@@ -47,11 +60,49 @@ def build_url(url, date):
     return bookmyshow_url
 
 
-def get_venue_list(url):
-    user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0'
-    headers = {'User-Agent': user_agent}
+def get_movie_id(name, location):
+    url = BASE_URL + '/' + location.lower()
+    req = Request(url, None, HEADERS)
+    with urlopen(req) as response:
+        html = response.read()
 
-    req = Request(url, None, headers)
+    soup = BeautifulSoup(html, 'html.parser')
+    movie_url_regex = re.compile("{}/movies/".format(location.lower()), re.IGNORECASE)
+    movie_anchors = soup.find_all('a', href=movie_url_regex)
+    for a in movie_anchors:
+        path = a.get('href')
+        if name.lower() in path:
+
+            # TODO: Handle a case where no match found
+
+            return path
+
+
+def get_movie_page_url(path, location):
+    movie_page_url = '{}/{}'.format(BASE_URL, path)
+    LOGGER.info('Movie page URL: %s', movie_page_url)
+
+    # TODO: Add some sort of validation for fields if needed
+
+    return movie_page_url
+
+
+def get_buytickets_page_url(movie_page_url, format):
+    req = Request(movie_page_url, None, HEADERS)
+    with urlopen(req) as response:
+        html = response.read()
+
+    soup = BeautifulSoup(html, 'html.parser')
+    anchor_elements = soup.find_all('a', {'class': 'dimension-pill'})
+    for element in anchor_elements:
+        contents = [content for content in element.contents]
+        if format in contents:
+            # TODO: Handle a case when content not found
+            return BASE_URL + element.get('href')
+
+
+def get_venue_list(url):
+    req = Request(url, None, HEADERS)
     with urlopen(req) as response:
         html = response.read()
 
@@ -88,11 +139,30 @@ def keep_checking(schdlr, url, keywords, seconds):
 
 def main():
     args = parse_args(sys.argv[1:])
+
+    LOGGER.debug('Received arguments \nURL: '
+                 '%s\nDate: %s\nKeywords: %s\nKeep checking after: %d seconds\nFormat: %s',
+                 args.url, args.date, args.keywords, args.seconds, args.format)
+
+    if not args.url:
+        if not args.location and not args.movie and not args.format:
+            LOGGER.error('You need to specify the `--location`, `--format`, `--date`, and the `--name` arguments '
+                         'if you\'re not specifying the URL directly. Exiting.')
+            sys.exit()
+        else:
+            LOGGER.info('Working')
+            path = get_movie_id(args.movie, args.location)
+            movie_page_url = get_movie_page_url(path, args.location)
+            buytickets_page_url = get_buytickets_page_url(movie_page_url, args.format)
+            LOGGER.info("BT: %s", buytickets_page_url)
+            bookmyshow_url = build_url(buytickets_page_url, args.date)
+    else:
+        bookmyshow_url = args.url
+
     LOGGER.debug('Received arguments \nURL: '
                  '%s\nDate: %s\nKeywords: %s\nKeep checking after: %d seconds',
                  args.url, args.date, args.keywords, args.seconds)
-    bookmyshow_url = build_url(args.url, args.date)
-    LOGGER.debug('BookMyShow booking page URL: %s', bookmyshow_url)
+    LOGGER.debug('BookMyShow buytickets page URL: %s', bookmyshow_url)
     schdlr = sched.scheduler(time.time, time.sleep)
     schdlr.enter(args.seconds, 1, keep_checking, (schdlr, bookmyshow_url,
                                                   args.keywords, args.seconds))
