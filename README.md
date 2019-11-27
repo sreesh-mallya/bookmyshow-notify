@@ -75,6 +75,13 @@ optional arguments:
 
 ```
 
+### TODOs
+- [ ] Concise error handling and validation
+- [ ] Host this package on PyPI
+- [ ] Proper releases
+- [ ] Write unit tests
+- [ ] TravisCI integration
+
 ## Built With
 
 * [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) - The Python library used to work with HTML
@@ -89,4 +96,4 @@ This project is licensed under the GPL-3.0 License - see the [LICENSE.md](LICENS
 
 ## Acknowledgments
 
-* Original idea inspired from [this answer](https://qr.ae/TaOysV) on Quora by @manojmj92.
+* Original idea inspired from [this answer](https://qr.ae/TaOysV) on Quora by [@manojmj92](https://github.com/manojmj92).
